@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 
 from handlers.start import start_router
+from utils.db import create_users_db
 from settings import ADMIN_ID, BOT_TOKEN
 
 
@@ -26,6 +27,7 @@ async def start():
     dp.include_router(start_router)
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
+    await create_users_db()
     try:
         await dp.start_polling(bot)
     finally:
