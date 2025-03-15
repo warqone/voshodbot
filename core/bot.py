@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 
 from handlers.start import start_router
+from handlers.search_name import search_name_router
 from utils.db import create_users_db
 from settings import ADMIN_ID, BOT_TOKEN
 
@@ -25,6 +26,7 @@ async def start():
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode='HTML'))
     dp = Dispatcher()
     dp.include_router(start_router)
+    dp.include_router(search_name_router)
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
     await create_users_db()
