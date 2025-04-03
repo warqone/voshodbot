@@ -1,10 +1,10 @@
 import asyncio
 import logging
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 
-from handlers.start import start_router
+from handlers.start import start_router, send_main_menu
 from handlers.search_name import search_name_router
 from handlers.basket import basket_router
 from handlers.cabinet import cabinet_router
@@ -31,6 +31,7 @@ async def start():
     dp.include_router(search_name_router)
     dp.include_router(basket_router)
     dp.include_router(cabinet_router)
+    dp.callback_query.register(send_main_menu, F.data == 'back_to_main')
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
     await create_users_db()

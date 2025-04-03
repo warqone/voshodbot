@@ -1,4 +1,5 @@
 API_URL = 'https://api.v-avto.ru/v1/'
+PHOTO_URL = 'https://api.v-avto.ru'
 BASKET = 'basket'
 BASKET_INFO = BASKET + '/info'
 ORDERS = 'orders'

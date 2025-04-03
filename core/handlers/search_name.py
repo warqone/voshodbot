@@ -8,7 +8,9 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-from handlers.constants import MIN_SEARCH_QUERY_LENGTH, ITEMS_PER_PAGE
+
+from handlers.constants import (
+    MIN_SEARCH_QUERY_LENGTH, ITEMS_PER_PAGE, PHOTO_URL)
 from handlers.start import get_main_menu
 from keyboards.start_kb import back_to_main_menu_button
 from utils.requests import request_search_name
@@ -138,12 +140,81 @@ class ProductListManager:
 
         if (current_page + 1) * ITEMS_PER_PAGE < total_products:
             navigation_buttons.append(("Следующая страница ➡️", "next_page"))
-
+        navigation_buttons.append(("Вернуться в главное меню", "back_to_main"))
         for text, callback_data in navigation_buttons:
             builder.button(text=text, callback_data=callback_data)
 
         builder.adjust(1)
         return builder.as_markup()
+
+    @staticmethod
+    async def get_product_details(
+            mog: str, state: FSMContext) -> Dict[str, Any]:
+        """Получает детальную информацию о продукте из сохраненных данных."""
+        data = await state.get_data()
+        products = data.get("products", [])
+
+        # Ищем продукт по mog в сохраненном списке
+        for product in products:
+            if product.get('mog') == mog:
+                return product
+
+        return {}
+
+    @staticmethod
+    async def send_product_details(
+        message: Message,
+        product: Dict[str, Any],
+        state: FSMContext
+    ) -> None:
+        """Отправляет детальную информацию о продукте с фото."""
+        try:
+            await message.delete()
+
+            text = (
+                f"<b>{product.get('name', 'Название не указано')}</b>\n"
+                f"<b>Производитель:</b> {product.get('oem_brand')}\n"
+                f"<b>Артикул:</b> {product.get('oem_num', 'Не указан')}\n"
+                f"<b>Цена:</b> {product.get('price', 'Не указана')} руб.\n"
+                f"<b>Количество на складах:</b> {product.get('count', 0)} "
+                f"{product.get('unit', 'шт')}\n"
+                "<b>Количество на складах Челябинска:</b> "
+                f"{product.get('count_chel', 0)} {product.get('unit', 'шт')}\n"
+                f"<b>Количество на складах Екатеринбурга:</b> "
+                f"{product.get('count_ekb', 0)} {product.get('unit', 'шт')}\n"
+            )
+
+            kb = InlineKeyboardBuilder()
+            kb.button(
+                text="⬅️ Вернуться к списку",
+                callback_data="back_to_list"
+            )
+            kb.button(
+                text="🛒 Добавить в корзину",
+                callback_data=f"add_to_cart_{product['mog']}"
+            )
+            kb.adjust(1)
+            try:
+                image_url = product.get('images')[0]
+                await message.answer_photo(
+                    photo=(PHOTO_URL + image_url),
+                    caption=text,
+                    reply_markup=kb.as_markup()
+                )
+                return
+            except Exception:
+                await message.answer(
+                    text=text,
+                    reply_markup=kb.as_markup()
+                )
+
+        except Exception as e:
+            logger.error(
+                f"Ошибка при отправке деталей продукта: {e}", exc_info=True)
+            await message.answer(
+                "<b>Произошла ошибка при загрузке деталей товара.</b>",
+                reply_markup=back_to_main_menu_button()
+            )
 
 
 @search_name_router.callback_query(F.data == "search_name")
@@ -183,6 +254,58 @@ async def handle_pagination(
         current_page += 1
 
     await call.answer()
+    await ProductListManager.display_product_page(
+        message=call.message,
+        products=products,
+        page_number=current_page,
+        state=state,
+        bot=bot
+    )
+
+
+@search_name_router.callback_query(F.data.startswith("detail_"))
+async def handle_product_detail(
+        call: CallbackQuery, state: FSMContext, bot: Bot) -> None:
+    """Отправляет сообщение с детальной информацией о запчасти"""
+    await call.answer()
+    mog = call.data.split("_")[1]
+
+    current_state = await state.get_data()
+    await state.update_data(previous_state=current_state)
+
+    product = await ProductListManager.get_product_details(mog, state)
+
+    if not product:
+        await call.message.answer(
+            "<b>Не удалось загрузить информацию о товаре.</b>",
+            reply_markup=back_to_main_menu_button()
+        )
+        return
+
+    await ProductListManager.send_product_details(call.message, product, state)
+
+
+@search_name_router.callback_query(F.data == "back_to_list")
+async def handle_back_to_list(
+    call: CallbackQuery,
+    state: FSMContext,
+    bot: Bot
+) -> None:
+    """Возвращает пользователя к списку товаров."""
+    data = await state.get_data()
+    previous_state = data.get("previous_state", {})
+
+    if not previous_state:
+        await call.message.answer(
+            "<b>Не удалось вернуться к списку товаров.</b>",
+            reply_markup=back_to_main_menu_button()
+        )
+        return
+
+    products = previous_state.get("products", [])
+    current_page = previous_state.get("current_page", 0)
+
+    await call.message.delete()
     await ProductListManager.display_product_page(
         message=call.message,
         products=products,

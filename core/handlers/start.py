@@ -120,7 +120,7 @@ async def get_main_menu(user_id: int, bot: Bot):
 
 async def send_main_menu(call: CallbackQuery):
     await call.message.delete()
-    await call.answer(
+    await call.message.answer(
         'Добро пожаловать в наш бот!\n'
         'Выберите действие из меню:',
         reply_markup=start_kb.main_menu_buttons()

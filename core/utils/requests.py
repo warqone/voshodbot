@@ -1,6 +1,6 @@
 import aiohttp
 
-from handlers.constants import API_URL, API_KEY, BASKET, SEARCH_NAME
+from handlers.constants import API_URL, API_KEY, BASKET, SEARCH_NAME, PHOTO_URL
 
 
 async def get_request(add_url: str):
@@ -33,3 +33,13 @@ async def request_basket_delete():
         url = f"{API_URL + BASKET}"
         async with session.delete(url, headers=headers) as response:
             return await response.json()
+
+
+async def get_product_photo(detail: str):
+    async with aiohttp.ClientSession() as session:
+        headers = {
+            'X-Voshod-API-KEY': API_KEY,
+        }
+        url = f"{PHOTO_URL + detail}"
+        async with session.get(url, headers=headers) as response:
+            return await response
