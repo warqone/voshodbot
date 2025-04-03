@@ -24,7 +24,7 @@ class TokenForm(StatesGroup):
     add_token = State()
 
 
-@start_router.message(F.text == "/start", Command(commands='start'))
+@start_router.message(Command(commands='start'))
 async def get_start(message: Message, state: FSMContext):
     await state.clear()
     user = await check_user_token(message.from_user.id)
@@ -97,12 +97,31 @@ async def get_user_token(message: Message, state: FSMContext, bot: Bot):
             'Произошла неизвестная ошибка. Попробуйте позже.')
 
 
-@start_router.callback_query(F.data == 'back_to_main',
-                             Command(commands='main'))
+@start_router.message(Command(commands='main'))
+async def command_main_menu(message: Message, bot: Bot, state: FSMContext):
+    await state.clear()
+    await get_main_menu(message.from_user.id, bot)
+
+
+@start_router.callback_query(F.data == 'back_to_main')
 async def get_main_menu(user_id: int, bot: Bot):
     await bot.send_photo(
         user_id,
         FSInputFile('/data/main_menu_photo.png'),
         caption=f'<a href="{main_menu_link}">Ссылка на товары акции</a>\n',
+    )
+    await bot.send_message(
+        chat_id=user_id,
+        text=('Добро пожаловать в наш бот!\n'
+              'Выберите действие из меню:'),
+        reply_markup=start_kb.main_menu_buttons()
+    )
+
+
+async def send_main_menu(call: CallbackQuery):
+    await call.message.delete()
+    await call.answer(
+        'Добро пожаловать в наш бот!\n'
+        'Выберите действие из меню:',
         reply_markup=start_kb.main_menu_buttons()
     )
