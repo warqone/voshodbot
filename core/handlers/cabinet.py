@@ -1,19 +1,26 @@
 from datetime import datetime
 
-from aiogram import Router, F, Bot
-from aiogram.types import CallbackQuery
+from aiogram import Router, F
+from aiogram.types import CallbackQuery, Message
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 
 from keyboards.cabinet_kb import (
     cabinet_keyboard, back_to_cabinet_keyboard, set_orders_list_keyboard)
-from handlers.constants import ORDERS, MARKUP_URL, ORDERS_DELIVERIES
+from handlers.constants import ORDERS, MARKUP_URL
 from handlers.start import send_main_menu
-from utils.requests import get_request
+from utils.requests import get_request, get_outlets_info, set_markup_request
 
 cabinet_router = Router()
 
 
+class Markup(StatesGroup):
+    wait_for_markup = State()
+
+
 @cabinet_router.callback_query(F.data == "account")
-async def account_info(call: CallbackQuery):
+async def account_info(call: CallbackQuery, state: FSMContext):
+    await state.clear()
     data = await get_request(MARKUP_URL)
     await call.message.edit_text(
         f'<b>Установленная наценка на товары:</b> {data["markup"]}%',
@@ -66,15 +73,19 @@ async def orders_list(call: CallbackQuery):
 
 @cabinet_router.callback_query(F.data == "addresses")
 async def addresses_list(call: CallbackQuery):
-    response = await get_request(ORDERS_DELIVERIES)
-    deliveries = response['deliveries']
+    response = await get_outlets_info()
     message = "<b>Список адресов доставки:</b>\n\n"
-    for delivery in deliveries:
-        name = delivery['name']
-        updated_at = datetime.fromisoformat(delivery['updated_at'])
+    outlets = [
+        delivery for delivery in response if delivery.get('type') == 'co'
+    ]
+    for outlet in outlets:
+        name = outlet['name']
+        add_info = outlet['add_info']
+        schedule = outlet['schedule']
         message += (
-            f"<b>{name}</b>\n"
-            f"<b>Создан:</b> {updated_at.strftime('%d.%m.%Y %H:%M')}\n\n"
+            f"<b>🧾 {name}</b>\n"
+            f"<b>💬 Комментарий с уточением к адресу:</b> {add_info}\n"
+            f"<b>🕓 Расписание работы:</b> {schedule}\n\n"
         )
     await call.message.edit_text(
         message,
@@ -83,14 +94,32 @@ async def addresses_list(call: CallbackQuery):
 
 
 @cabinet_router.callback_query(F.data == 'set_markup')
-async def get_markup(call: CallbackQuery):
+async def get_markup(call: CallbackQuery, state: FSMContext):
     await call.message.edit_text(
-        "<b>Установите наценку на товары:</b>",
-        reply_markup=cabinet_keyboard()
+        "<b>Установите наценку на товары, введите новую наценку ниже:</b>",
+        reply_markup=back_to_cabinet_keyboard()
     )
+    await state.set_state(Markup.wait_for_markup)
+
+
+@cabinet_router.message(Markup.wait_for_markup)
+async def set_markup(message: Message, state: FSMContext):
+    markup = message.text
+    try:
+        markup = float(markup)
+        await state.update_data(markup=markup)
+        await set_markup_request(markup)
+        await message.answer(
+            f"<b>Наценка на товары установлена на {markup}%</b>",
+            reply_markup=back_to_cabinet_keyboard()
+        )
+        await state.clear()
+    except ValueError:
+        await message.answer(
+            "<b>Наценка должна быть числом (1.0, 7.5 и т.д.</b>")
 
 
 @cabinet_router.callback_query(F.data == 'back_to_main')
-async def handle_back_to_main_from_cabinet(call: CallbackQuery):
+async def handle_back_to_main_from_cabinet():
     """Возвращает пользователя в главное меню."""
     await send_main_menu()

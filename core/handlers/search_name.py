@@ -82,7 +82,7 @@ class ProductListManager:
         state: FSMContext,
         bot: Bot
     ) -> None:
-        """Display a page of products with pagination"""
+        """Показывает список продуктов с пагинацией."""
         await state.update_data(products=products, current_page=page_number)
 
         start_idx = page_number * ITEMS_PER_PAGE

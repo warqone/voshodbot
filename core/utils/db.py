@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 async def create_users_db():
-    async with aiosqlite.connect('/data/users.db') as db:
+    async with aiosqlite.connect('core/databases/users.db') as db:
         await db.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
@@ -19,7 +19,7 @@ async def create_users_db():
 
 
 async def check_user_token(user_id: int):
-    async with aiosqlite.connect('/data/users.db') as db:
+    async with aiosqlite.connect('core/databases/users.db') as db:
         cursor = await db.execute(
             'SELECT * FROM users WHERE user_id = ?', (user_id,)
         )
@@ -28,7 +28,7 @@ async def check_user_token(user_id: int):
 
 
 async def add_or_update_user(user_id: int, username: str, api_token: str):
-    async with aiosqlite.connect('/data/users.db') as db:
+    async with aiosqlite.connect('core/databases/users.db') as db:
         cursor = await db.execute(
             'SELECT * FROM users WHERE user_id = ?', (user_id,)
         )

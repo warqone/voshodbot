@@ -8,7 +8,7 @@ from aiogram.filters import Command, StateFilter
 from aiogram.types import CallbackQuery, Message, FSInputFile
 import requests
 
-from handlers.constants import API_URL, ORDERS
+from handlers.constants import API_URL_V1, ORDERS
 from keyboards import start_kb
 from utils.db import add_or_update_user, check_user_token
 from utils.utils import load_file
@@ -73,7 +73,7 @@ async def get_user_token(message: Message, state: FSMContext, bot: Bot):
         headers = {
             'X-Voshod-API-KEY': api_token
         }
-        response = requests.get(f'{API_URL + ORDERS}', headers=headers)
+        response = requests.get(f'{API_URL_V1 + ORDERS}', headers=headers)
         if response.status_code == HTTPStatus.OK:
             await message.answer('Ключ API добавлен успешно.')
             await add_or_update_user(
@@ -112,8 +112,8 @@ async def get_main_menu(user_id: int, bot: Bot):
     )
     await bot.send_message(
         chat_id=user_id,
-        text=('Добро пожаловать в наш бот!\n'
-              'Выберите действие из меню:'),
+        text=('<b>Добро пожаловать в наш бот!\n'
+              'Выберите действие из меню:</b>'),
         reply_markup=start_kb.main_menu_buttons()
     )
 
@@ -121,7 +121,7 @@ async def get_main_menu(user_id: int, bot: Bot):
 async def send_main_menu(call: CallbackQuery):
     await call.message.delete()
     await call.message.answer(
-        'Добро пожаловать в наш бот!\n'
-        'Выберите действие из меню:',
+        '<b>Добро пожаловать в наш бот!\n'
+        'Выберите действие из меню:</b>',
         reply_markup=start_kb.main_menu_buttons()
     )

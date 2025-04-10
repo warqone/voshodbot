@@ -1,9 +1,10 @@
-API_URL = 'https://api.v-avto.ru/v1/'
+API_URL_V1 = 'https://api.v-avto.ru/v1/'
+API_URL_V2 = 'https://api.v-avto.ru/v2/'
 PHOTO_URL = 'https://api.v-avto.ru'
 BASKET = 'basket'
 BASKET_INFO = BASKET + '/info'
 ORDERS = 'orders'
-ORDERS_DELIVERIES = ORDERS + '/deliveries'
+OUTLETS = 'outlets'
 SEARCH_NAME = 'search/name'
 MARKUP_URL = 'user/markup'
 
