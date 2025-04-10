@@ -45,11 +45,12 @@ class ProductListManager:
         message: Message,
         search_query: str,
         state: FSMContext,
-        bot: Bot
+        bot: Bot,
+        user_api_token: str
     ) -> None:
         """Поиск результатов и их обработка."""
         try:
-            data = await request_search_name(search_query)
+            data = await request_search_name(search_query, user_api_token)
             if not data or not data.get('response', {}).get('items'):
                 await message.reply(
                     "<b>Товары не найдены. Попробуйте другое название.</b>",
@@ -109,11 +110,11 @@ class ProductListManager:
 
         for product in products:
             message_lines.extend([
-                f"<b>{product['name']}</b>",
-                f"<b>Производитель:</b> {product['oem_brand']}",
-                f"<b>Артикул:</b> {product['oem_num']}",
-                f"<b>Цена:</b> {product['price']} руб.",
-                f"<b>Количество на складах:</b> {product['count']}"
+                f"📦 <b>{product['name']}</b>",
+                f"🏢 <b>Производитель:</b> {product['oem_brand']}",
+                f"🔢 <b>Артикул:</b> {product['oem_num']}",
+                f"🏷️ <b>Цена:</b> {product['price']} руб.",
+                f"📊 <b>Количество на складах:</b> {product['count']}"
                 f" {product['unit']}\n"
             ])
 
@@ -172,10 +173,10 @@ class ProductListManager:
             await message.delete()
 
             text = (
-                f"<b>{product.get('name', 'Название не указано')}</b>\n"
-                f"<b>Производитель:</b> {product.get('oem_brand')}\n"
-                f"<b>Артикул:</b> {product.get('oem_num', 'Не указан')}\n"
-                f"<b>Цена:</b> {product.get('price', 'Не указана')} руб.\n"
+                f"📦 <b>{product.get('name', 'Название не указано')}</b>\n"
+                f"🏢 <b>Производитель:</b> {product.get('oem_brand')}\n"
+                f"🔢 <b>Артикул:</b> {product.get('oem_num', 'Не указан')}\n"
+                f"🏷️ <b>Цена:</b> {product.get('price', 'Не указана')} руб.\n"
                 f"<b>Количество на складах:</b> {product.get('count', 0)} "
                 f"{product.get('unit', 'шт')}\n"
                 "<b>Количество на складах Челябинска:</b> "
@@ -191,7 +192,7 @@ class ProductListManager:
             )
             kb.button(
                 text="🛒 Добавить в корзину",
-                callback_data=f"add_to_cart_{product['mog']}"
+                callback_data=f"add_to_basket_{product['mog']}"
             )
             kb.adjust(1)
             try:
@@ -227,7 +228,10 @@ async def handle_search_name(call: CallbackQuery, state: FSMContext) -> None:
 
 @search_name_router.message(StateFilter(SearchForm.get_name))
 async def handle_search_query(
-        message: Message, state: FSMContext, bot: Bot) -> None:
+        message: Message,
+        state: FSMContext,
+        bot: Bot,
+        user_api_token: str) -> None:
     """Возвращает результаты поиска запчастей по наименованию"""
     if not ProductListManager.validate_search_query(message.text):
         await message.answer("<b>Слишком короткое название запчасти.</b>")
@@ -236,7 +240,7 @@ async def handle_search_query(
     await message.answer(
         f"<b>Поиск запчастей по наименованию: {message.text}...</b>")
     await ProductListManager.process_search_results(
-        message, message.text, state, bot)
+        message, message.text, state, bot, user_api_token)
 
 
 @search_name_router.callback_query(F.data.in_(["prev_page", "next_page"]))

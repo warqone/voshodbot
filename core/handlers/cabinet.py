@@ -19,9 +19,11 @@ class Markup(StatesGroup):
 
 
 @cabinet_router.callback_query(F.data == "account")
-async def account_info(call: CallbackQuery, state: FSMContext):
+async def account_info(call: CallbackQuery,
+                       state: FSMContext,
+                       user_api_token: str):
     await state.clear()
-    data = await get_request(MARKUP_URL)
+    data = await get_request(MARKUP_URL, user_api_token)
     await call.message.edit_text(
         f'<b>Установленная наценка на товары:</b> {data["markup"]}%',
         reply_markup=cabinet_keyboard()
@@ -38,7 +40,7 @@ async def orders(call: CallbackQuery):
 
 @cabinet_router.callback_query(
         F.data.in_(['last_order', 'last_five_orders', 'last_ten_orders']))
-async def orders_list(call: CallbackQuery):
+async def orders_list(call: CallbackQuery, user_api_token: str):
     data = call.data
     if data == 'last_order':
         NUMBER_OF_ORDERS = 1
@@ -46,7 +48,7 @@ async def orders_list(call: CallbackQuery):
         NUMBER_OF_ORDERS = 5
     else:
         NUMBER_OF_ORDERS = 10
-    orders_list = await get_request(ORDERS)
+    orders_list = await get_request(ORDERS, user_api_token)
     orders = orders_list['orders']
     message = '<b>Список заказов:</b>\n'
     for order in orders[:NUMBER_OF_ORDERS]:
@@ -72,8 +74,8 @@ async def orders_list(call: CallbackQuery):
 
 
 @cabinet_router.callback_query(F.data == "addresses")
-async def addresses_list(call: CallbackQuery):
-    response = await get_outlets_info()
+async def addresses_list(call: CallbackQuery, user_api_token: str):
+    response = await get_outlets_info(user_api_token)
     message = "<b>Список адресов доставки:</b>\n\n"
     outlets = [
         delivery for delivery in response if delivery.get('type') == 'co'
@@ -103,12 +105,14 @@ async def get_markup(call: CallbackQuery, state: FSMContext):
 
 
 @cabinet_router.message(Markup.wait_for_markup)
-async def set_markup(message: Message, state: FSMContext):
+async def set_markup(message: Message,
+                     state: FSMContext,
+                     user_api_token: str):
     markup = message.text
     try:
         markup = float(markup)
         await state.update_data(markup=markup)
-        await set_markup_request(markup)
+        await set_markup_request(markup, user_api_token)
         await message.answer(
             f"<b>Наценка на товары установлена на {markup}%</b>",
             reply_markup=back_to_cabinet_keyboard()

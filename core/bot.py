@@ -8,6 +8,7 @@ from handlers.start import start_router, send_main_menu
 from handlers.search_name import search_name_router
 from handlers.basket import basket_router
 from handlers.cabinet import cabinet_router
+from middlewares.token import UserTokenMiddleware
 from utils.db import create_users_db
 from settings import ADMIN_ID, BOT_TOKEN
 
@@ -27,6 +28,7 @@ async def on_shutdown(bot: Bot):
 async def start():
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode='HTML'))
     dp = Dispatcher()
+    dp.update.middleware(UserTokenMiddleware())
     dp.include_router(start_router)
     dp.include_router(search_name_router)
     dp.include_router(basket_router)

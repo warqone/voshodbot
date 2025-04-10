@@ -7,18 +7,34 @@ from aiogram.types import CallbackQuery
 from handlers.constants import BASKET_INFO, BASKET
 from keyboards.start_kb import back_to_main_menu_button
 from keyboards.basket_kb import basket_main_keyboard
-from utils.requests import get_request, request_basket_delete
+from utils.requests import (
+    get_request, request_basket_delete, request_add_to_basket)
 
 logger = logging.getLogger(__name__)
 basket_router = Router()
 
 
+@basket_router.callback_query(F.data.startswith('add_to_basket_'))
+async def add_to_basket(call: CallbackQuery,
+                        user_api_token: str) -> None:
+    """Добавить товар в корзину"""
+    try:
+        print(call.data.split('_')[3])
+        await request_add_to_basket(call.data.split('_')[3], user_api_token)
+        await call.answer(
+            text='Товар добавлен в корзину. Количество можно изменить в '
+            'корзине', show_alert=True)
+    except Exception as e:
+        logger.error(e)
+
+
 class BasketManager:
     @staticmethod
-    async def show_basket(call: CallbackQuery) -> None:
+    async def show_basket(call: CallbackQuery,
+                          user_api_token: str) -> None:
         """Показать содержимое корзины"""
         try:
-            data = await get_request(BASKET)
+            data = await get_request(BASKET, user_api_token)
             items = data['items']
             if len(items) == 0:
                 await call.answer(
@@ -26,7 +42,7 @@ class BasketManager:
                     show_alert=True
                 )
                 return
-            basket_info = await get_request(BASKET_INFO)
+            basket_info = await get_request(BASKET_INFO, user_api_token)
             total_price = basket_info['basket']['total_price']
             count = basket_info['basket']['count']
             message = await BasketManager.format_basket_message(items)
@@ -69,10 +85,10 @@ class BasketManager:
         return message
 
     @staticmethod
-    async def clear_basket(call: CallbackQuery) -> None:
+    async def clear_basket(call: CallbackQuery, user_api_token: str) -> None:
         """Очистка корзины"""
         try:
-            await request_basket_delete()
+            await request_basket_delete(user_api_token)
             await call.message.edit_text(
                 "🗑 Корзина очищена.",
                 reply_markup=back_to_main_menu_button()
@@ -86,10 +102,10 @@ class BasketManager:
 
 
 @basket_router.callback_query(F.data == 'basket')
-async def handle_basket(call: CallbackQuery):
-    await BasketManager.show_basket(call)
+async def handle_basket(call: CallbackQuery, user_api_token: str):
+    await BasketManager.show_basket(call, user_api_token)
 
 
 @basket_router.callback_query(F.data == 'clear_basket')
-async def handle_clear(call: CallbackQuery):
-    await BasketManager.clear_basket(call)
+async def handle_clear(call: CallbackQuery, user_api_token: str):
+    await BasketManager.clear_basket(call, user_api_token)
