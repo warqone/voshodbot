@@ -46,7 +46,7 @@ class BasketManager:
             count = basket_info['basket']['count']
             message = await BasketManager.format_basket_message(items)
             message += (
-                f'\n\n<b>Всего товаров:</b> {count}\n'
+                f'\n<b>Всего товаров:</b> {count}\n'
                 f'<b>Общая стоимость:</b> {total_price} руб.')
             await call.message.edit_text(
                 message,
@@ -75,11 +75,11 @@ class BasketManager:
                 "✅ В наличии" if item['available'] else "❌ Нет в наличии")
 
             message += (
-                f"<b>{name}</b>\n"
-                f"Производитель: {oem_brand}\n"
-                f"Количество: {count} {unit}\n"
-                f"Цена: {price} руб.\n"
-                f"Статус: {available}\n\n"
+                f"📦 <b>{name}</b>\n"
+                f"🏢 Производитель: {oem_brand}\n"
+                f"📊 Количество: {count} {unit}\n"
+                f"🏷️ Цена: {price} руб.\n"
+                f"{available}\n\n"
             )
         return message
 

@@ -3,11 +3,12 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import StateFilter
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
-from handlers.constants import MIN_SEARCH_QUERY_LENGTH
+from handlers.constants import ITEMS_PER_PAGE, MIN_SEARCH_QUERY_LENGTH
 from keyboards.start_kb import back_to_main_menu_button
 from utils.requests import request_search_cross
+from utils.utils import formatting_items
 
 
 class SearchCross(StatesGroup):
@@ -23,7 +24,7 @@ async def search_cross(call: CallbackQuery, state: FSMContext):
     """Поиск товара по артикулу."""
     await call.message.edit_text(
         '<b>Для поиска товара по артикулу введите артикул.</b>\n'
-        '<i>Пример:\nGB123\nGB-102M</i>',
+        '<i>Пример:\n-C25011\n-K015670XS</i>',
         reply_markup=back_to_main_menu_button()
     )
     await state.set_state(SearchCross.search_cross)
@@ -46,13 +47,17 @@ async def search_cross_brand(message: Message,
         response = await request_search_cross(message.text, user_api_token)
         brands = response.get('brands')
         if brands:
-            await state.update_data(article=message.text)
             kb = InlineKeyboardBuilder()
             for brand in brands:
                 name_of_brand = brand.get('brand')
+                article = brand.get('oem')
+                if article:
+                    callback_data = f'cross_detail_{name_of_brand}_{article}'
+                else:
+                    callback_data = f'cross_detail_{name_of_brand}_{article}'
                 kb.button(
                     text=name_of_brand,
-                    callback_data=f'cross_detail_{name_of_brand}'
+                    callback_data=callback_data
                 )
             kb.adjust(2)
             await message.answer(
@@ -76,9 +81,8 @@ async def cross_detail(call: CallbackQuery,
                        user_api_token: str):
     """Результат поиска товара по артикулу (после уточнения бренда)."""
     await call.message.delete()
-    data = await state.get_data()
-    article = data.get('article')
     brand = call.data.split('_')[2]
+    article = call.data.split('_')[3]
     response = await request_search_cross(
         article, user_api_token, brand
     )
@@ -92,18 +96,7 @@ async def cross_detail(call: CallbackQuery,
     if target:
         target = target[0]
         image = target.get('images')[0]
-        message = (
-            f"📦 <b>{target.get('name', 'Название не указано')}</b>\n"
-            f"🏢 <b>Производитель:</b> {target.get('oem_brand', 'Не указан')}\n"
-            f"🔢 <b>Артикул:</b> {target.get('oem_num', 'Не указан')}\n"
-            f"🏷️ <b>Цена:</b> {target.get('price', 'Не указана')} руб.\n"
-            f"<b>Количество на складах:</b> {target.get('count', 0)} "
-            f"{target.get('unit', 'шт')}\n"
-            "<b>Количество на складах Челябинска:</b> "
-            f"{target.get('count_chel', 0)} {target.get('unit', 'шт')}\n"
-            "<b>Количество на складах Екатеринбурга:</b> "
-            f"{target.get('count_ekb', 0)} {target.get('unit', 'шт')}\n"
-        )
+        message = await formatting_items(target)
         if target.get('count') > 0:
             kb.button(
                 text='🛒 Добавить в корзину',
@@ -133,41 +126,85 @@ async def cross_detail(call: CallbackQuery,
 
 @search_cross_router.callback_query(F.data == 'show_analogs')
 async def show_analogs(call: CallbackQuery, state: FSMContext):
-    """Показать аналоги."""
+    """Показать аналоги (первая страница)."""
     await call.message.delete()
     data = await state.get_data()
     analogs = data.get('analogs', [])
-    if analogs:
-        avalaible_analogs = [
-            analog for analog in analogs if analog.get('count') > 0
-        ]
-        kb = InlineKeyboardBuilder()
-        message = '<b>Аналоги:</b>\n'
-        if avalaible_analogs:
-            for analog in avalaible_analogs:
-                message += (f'{analog.get("name", "Название не указано")}\n'
-                            f'{analog.get("price", "Цена не указана")} руб.\n'
-                            f'{analog.get("count", "Количество не указано")} '
-                            f'{analog.get("unit", "шт")}'
-                )
-                kb.button(
-                    text=analog.get('name', 'Название не указано'),
-                    callback_data=f'cross_detail_{analog.get("mog")}'
-                )
-                kb.adjust(1)
-            await call.message.answer(
-                '<b>Аналоги:</b>\n',
-                reply_markup=kb.as_markup()
-            )
-    else:
+
+    avalaible_analogs = [
+        analog for analog in analogs if analog.get('count') > 0]
+
+    if not avalaible_analogs:
+
+        try:
+            await call.message.delete()
+        except Exception:
+            pass
         await call.message.answer(
             '<b>Аналоги не найдены.</b>',
             reply_markup=back_to_main_menu_button()
         )
         return
-    # kb = InlineKeyboardBuilder()
-    # for analog in analogs:
-    #     kb.button(
-    #         text=analog.get('name', 'Название не указано'),
-    #         callback_data=f'cross_detail_{analog.get("mog")}'
-    #     )
+
+    sent_message = await call.message.answer(
+        '<b>Загружаю аналоги...</b>'
+    )
+
+    await show_analogs_page(sent_message, avalaible_analogs, page=0)
+
+
+async def show_analogs_page(message, analogs, page=0):
+    """Показать страницу с аналогами."""
+    start_idx = page * ITEMS_PER_PAGE
+    end_idx = start_idx + ITEMS_PER_PAGE
+    page_items = analogs[start_idx:end_idx]
+
+    kb = InlineKeyboardBuilder()
+
+    message_text = '<b>Аналоги:</b>\n\n'
+    for idx, analog in enumerate(page_items, start=start_idx + 1):
+        message_text += await formatting_items(analog)
+        article = analog.get('oem_num', 'Не указан')
+        price = analog.get('price', 'Не указана')
+        brand = analog.get('oem_brand', 'Не указан')
+        kb.button(
+            text=(
+                f"{article} "
+                f"({price}) руб."
+            ), callback_data=f"cross_detail_{brand}_{article}"
+        )
+    pagination_buttons = []
+    if page > 0:
+        pagination_buttons.append(InlineKeyboardButton(
+            text="⬅️ Предыдущая страница",
+            callback_data=f"analogs_page_{page - 1}"
+        ))
+    if end_idx < len(analogs):
+        pagination_buttons.append(InlineKeyboardButton(
+            text="Следующая страница ➡️",
+            callback_data=f"analogs_page_{page + 1}"
+        ))
+
+    if pagination_buttons:
+        kb.row(*pagination_buttons)
+    kb.button(text='Вернуться в главное меню', callback_data='back_to_main')
+    kb.adjust(1)
+
+    await message.edit_text(
+        message_text,
+        reply_markup=kb.as_markup()
+    )
+
+
+@search_cross_router.callback_query(F.data.startswith('analogs_page_'))
+async def handle_analogs_pagination(call: CallbackQuery, state: FSMContext):
+    """Обработчик переключения страниц с аналогами."""
+    await call.answer()
+    page = int(call.data.split('_')[-1])
+
+    data = await state.get_data()
+    analogs = data.get('analogs', [])
+    avalaible_analogs = [
+        analog for analog in analogs if analog.get('count') > 0]
+
+    await show_analogs_page(call.message, avalaible_analogs, page)
