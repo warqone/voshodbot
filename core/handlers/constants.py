@@ -6,6 +6,7 @@ BASKET_INFO = BASKET + '/info'
 ORDERS = 'orders'
 OUTLETS = 'outlets'
 SEARCH_NAME = 'search/name'
+SEARCH_CROSS = 'search/cross'
 MARKUP_URL = 'user/markup'
 
 ITEMS_PER_PAGE = 5

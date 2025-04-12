@@ -19,7 +19,6 @@ async def add_to_basket(call: CallbackQuery,
                         user_api_token: str) -> None:
     """Добавить товар в корзину"""
     try:
-        print(call.data.split('_')[3])
         await request_add_to_basket(call.data.split('_')[3], user_api_token)
         await call.answer(
             text='Товар добавлен в корзину. Количество можно изменить в '

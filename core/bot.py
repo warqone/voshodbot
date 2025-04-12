@@ -6,6 +6,7 @@ from aiogram.client.default import DefaultBotProperties
 
 from handlers.start import start_router, send_main_menu
 from handlers.search_name import search_name_router
+from handlers.search_cross import search_cross_router
 from handlers.basket import basket_router
 from handlers.cabinet import cabinet_router
 from middlewares.token import UserTokenMiddleware
@@ -31,6 +32,7 @@ async def start():
     dp.update.middleware(UserTokenMiddleware())
     dp.include_router(start_router)
     dp.include_router(search_name_router)
+    dp.include_router(search_cross_router)
     dp.include_router(basket_router)
     dp.include_router(cabinet_router)
     dp.callback_query.register(send_main_menu, F.data == 'back_to_main')

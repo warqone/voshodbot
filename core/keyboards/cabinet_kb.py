@@ -2,6 +2,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
 def cabinet_keyboard():
+    """Клавиатура личного кабинета."""
     kb = InlineKeyboardBuilder()
     kb.button(text='📋 Список заказов', callback_data='orders')
     kb.button(text='📈 Изменить наценку', callback_data='set_markup')
@@ -12,6 +13,7 @@ def cabinet_keyboard():
 
 
 def set_orders_list_keyboard():
+    """Клавиатура для выбора списка заказов."""
     kb = InlineKeyboardBuilder()
     kb.button(text='Последний заказ', callback_data='last_order')
     kb.button(text='Последние 5 заказов', callback_data='last_five_orders')
@@ -21,6 +23,7 @@ def set_orders_list_keyboard():
 
 
 def back_to_cabinet_keyboard():
+    """Клавиатура для возврата в кабинет."""
     kb = InlineKeyboardBuilder()
     kb.button(text='◀️ Вернуться в кабинет', callback_data='account')
     return kb.as_markup()

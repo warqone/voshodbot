@@ -3,8 +3,10 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 def basket_main_keyboard() -> InlineKeyboardBuilder:
     """Создание клавиатуры для корзины"""
-    builder = InlineKeyboardBuilder()
-    builder.button(text="🧹 Очистить", callback_data="clear_basket")
-    builder.button(text="🚖 Оформить", callback_data="checkout_basket")
-    builder.adjust(1)
-    return builder.as_markup()
+    kb = InlineKeyboardBuilder()
+    kb.button(text='Редактировать', callback_data='edit_basket')
+    kb.button(text='🧹 Очистить', callback_data='clear_basket')
+    kb.button(text='🚖 Оформить', callback_data='checkout_basket')
+    kb.button(text='◀️ Вернуться в меню', callback_data='back_to_main')
+    kb.adjust(1)
+    return kb.as_markup()

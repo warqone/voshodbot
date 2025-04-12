@@ -100,7 +100,20 @@ async def get_user_token(message: Message, state: FSMContext, bot: Bot):
 @start_router.message(Command(commands='main'))
 async def command_main_menu(message: Message, bot: Bot, state: FSMContext):
     await state.clear()
-    await get_main_menu(message.from_user.id, bot)
+    user = await check_user_token(message.from_user.id)
+    if user:
+        await get_main_menu(message.from_user.id, bot)
+    else:
+        await message.answer(
+            '<b>Вы не добавили ключ API.</b>\n'
+            'Для продолжения работы, необходимо '
+            'выполнить следующие шаги:\n'
+            '1️⃣ Нажав на кнопку, перейти на наш сайт\n'
+            '2️⃣ Создать, либо скопировать ключ API\n'
+            '3️⃣ Отправить сообщение с ключом API.',
+            reply_markup=start_kb.token_link_button()
+        )
+        await state.set_state(TokenForm.add_token)
 
 
 @start_router.callback_query(F.data == 'back_to_main')

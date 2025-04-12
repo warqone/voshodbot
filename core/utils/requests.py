@@ -2,7 +2,7 @@ import aiohttp
 import json
 
 from handlers.constants import (
-    API_URL_V1, API_URL_V2, BASKET, SEARCH_NAME, PHOTO_URL,
+    API_URL_V1, API_URL_V2, BASKET, SEARCH_NAME, SEARCH_CROSS, PHOTO_URL,
     MARKUP_URL, OUTLETS)
 
 
@@ -36,6 +36,20 @@ async def request_search_name(name: str, user_api_token: str):
         url = f"{API_URL_V1 + SEARCH_NAME}?q={name}&a=1"
         async with session.get(url, headers=headers) as response:
             return await response.json()
+
+
+async def request_search_cross(query: str, user_api_token: str, brand=None):
+    """Выполняет запрос к API для поиска по кросс-номеру."""
+    async with aiohttp.ClientSession() as session:
+        headers = {
+            'X-Voshod-API-KEY': user_api_token,
+        }
+        if brand:
+            query = f"{query},{brand}"
+        url = f"{API_URL_V1 + SEARCH_CROSS}?q={query}&a=1"
+        async with session.get(url, headers=headers) as response:
+            data = await response.json()
+            return data['response']
 
 
 async def request_add_to_basket(product_id: str, user_api_token: str):

@@ -127,10 +127,10 @@ class ProductListManager:
         total_products: int
     ) -> InlineKeyboardBuilder:
         """Создаёт клавиатуру с товарами и пагинацией."""
-        builder = InlineKeyboardBuilder()
+        kb = InlineKeyboardBuilder()
 
         for product in products:
-            builder.button(
+            kb.button(
                 text=f"{product['oem_num']} ({product['price']} руб.)",
                 callback_data=f"detail_{product['mog']}"
             )
@@ -143,10 +143,10 @@ class ProductListManager:
             navigation_buttons.append(("Следующая страница ➡️", "next_page"))
         navigation_buttons.append(("Вернуться в главное меню", "back_to_main"))
         for text, callback_data in navigation_buttons:
-            builder.button(text=text, callback_data=callback_data)
+            kb.button(text=text, callback_data=callback_data)
 
-        builder.adjust(1)
-        return builder.as_markup()
+        kb.adjust(1)
+        return kb.as_markup()
 
     @staticmethod
     async def get_product_details(
@@ -155,7 +155,6 @@ class ProductListManager:
         data = await state.get_data()
         products = data.get("products", [])
 
-        # Ищем продукт по mog в сохраненном списке
         for product in products:
             if product.get('mog') == mog:
                 return product
@@ -174,14 +173,14 @@ class ProductListManager:
 
             text = (
                 f"📦 <b>{product.get('name', 'Название не указано')}</b>\n"
-                f"🏢 <b>Производитель:</b> {product.get('oem_brand')}\n"
+                f"🏢 <b>Производитель:</b> {product.get('oem_brand', 'Не указан')}\n"
                 f"🔢 <b>Артикул:</b> {product.get('oem_num', 'Не указан')}\n"
                 f"🏷️ <b>Цена:</b> {product.get('price', 'Не указана')} руб.\n"
                 f"<b>Количество на складах:</b> {product.get('count', 0)} "
                 f"{product.get('unit', 'шт')}\n"
                 "<b>Количество на складах Челябинска:</b> "
                 f"{product.get('count_chel', 0)} {product.get('unit', 'шт')}\n"
-                f"<b>Количество на складах Екатеринбурга:</b> "
+                "<b>Количество на складах Екатеринбурга:</b> "
                 f"{product.get('count_ekb', 0)} {product.get('unit', 'шт')}\n"
             )
 
@@ -195,15 +194,14 @@ class ProductListManager:
                 callback_data=f"add_to_basket_{product['mog']}"
             )
             kb.adjust(1)
-            try:
-                image_url = product.get('images')[0]
+
+            if product.get('images') and len(product['images']) > 0:
                 await message.answer_photo(
-                    photo=(PHOTO_URL + image_url),
+                    photo=(PHOTO_URL + product['images'][0]),
                     caption=text,
                     reply_markup=kb.as_markup()
                 )
-                return
-            except Exception:
+            else:
                 await message.answer(
                     text=text,
                     reply_markup=kb.as_markup()
