@@ -42,8 +42,14 @@ ___
 ```sh
 git clone git@github.com:warqone/voshodbot.git
 ```
-2. Перенесите файлы из папки data, в папку C:/data
-3. В файле settings.py введите ваши настройки.
+2. Установите зависимости
+```sh
+python -m venv .venv
+source .venv/Scripts/activate
+pip install -r requirements.txt
+```
+3. Перенесите файлы из папки data, в папку C:/data
+4. В файле settings.py введите ваши настройки.
 ```sh
 ADMIN_ID
 BOT_TOKEN
