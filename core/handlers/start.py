@@ -14,7 +14,7 @@ from utils.db import add_or_update_user, check_user_token
 from utils.utils import load_file
 
 main_menu_link = load_file('/data/main_menu_link.txt')
-
+instruction_txt = load_file('/data/instruction.txt')
 logger = logging.getLogger(__name__)
 
 start_router = Router()
@@ -37,11 +37,7 @@ async def get_start(message: Message, state: FSMContext):
     else:
         await message.answer(
             f'<b>Привет, {message.from_user.first_name}!\n'
-            'Добро пожаловать в наш бот! Для продолжения работы, необходимо '
-            'выполнить следующие шаги:</b>\n'
-            '1️⃣ Нажав на кнопку, перейти на наш сайт\n'
-            '2️⃣ Создать, либо скопировать ключ API\n'
-            '3️⃣ Отправить сообщение с ключом API.',
+            'Добро пожаловать в наш бот!</b>\n' + instruction_txt,
             reply_markup=start_kb.token_link_button()
         )
         await state.set_state(TokenForm.add_token)
@@ -52,11 +48,7 @@ async def change_token(call: CallbackQuery, bot: Bot, state: FSMContext):
     select = call.data
     if select == 'change_token':
         await call.message.edit_text(
-            '<b>Для продолжения работы, необходимо '
-            'выполнить следующие шаги:</b>\n'
-            '1️⃣ Нажав на кнопку, перейти на наш сайт\n'
-            '2️⃣ Создать, либо скопировать ключ API\n'
-            '3️⃣ Отправить сообщение с ключом API.',
+            instruction_txt,
             reply_markup=start_kb.token_link_button()
         )
         await state.set_state(TokenForm.add_token)
@@ -105,12 +97,7 @@ async def command_main_menu(message: Message, bot: Bot, state: FSMContext):
         await get_main_menu(message.from_user.id, bot)
     else:
         await message.answer(
-            '<b>Вы не добавили ключ API.</b>\n'
-            'Для продолжения работы, необходимо '
-            'выполнить следующие шаги:\n'
-            '1️⃣ Нажав на кнопку, перейти на наш сайт\n'
-            '2️⃣ Создать, либо скопировать ключ API\n'
-            '3️⃣ Отправить сообщение с ключом API.',
+            '<b>Вы не добавили ключ API.</b>\n' + instruction_txt,
             reply_markup=start_kb.token_link_button()
         )
         await state.set_state(TokenForm.add_token)
@@ -118,11 +105,6 @@ async def command_main_menu(message: Message, bot: Bot, state: FSMContext):
 
 @start_router.callback_query(F.data == 'back_to_main')
 async def get_main_menu(user_id: int, bot: Bot):
-    await bot.send_photo(
-        user_id,
-        FSInputFile('/data/main_menu_photo.png'),
-        caption=f'<a href="{main_menu_link}">Ссылка на товары акции</a>\n',
-    )
     await bot.send_message(
         chat_id=user_id,
         text=('<b>Добро пожаловать в наш бот!\n'
@@ -134,7 +116,6 @@ async def get_main_menu(user_id: int, bot: Bot):
 async def send_main_menu(call: CallbackQuery):
     await call.message.delete()
     await call.message.answer(
-        '<b>Добро пожаловать в наш бот!\n'
-        'Выберите действие из меню:</b>',
+        '<b>Выберите действие из меню:</b>',
         reply_markup=start_kb.main_menu_buttons()
     )

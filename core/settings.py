@@ -1,2 +1,8 @@
+import os
+
 ADMIN_ID = 422637096
-BOT_TOKEN = '7910774369:AAELq3X3mgo7fVlRW0_NFphheOYnzRe0IkQ'  # CardayTestBot
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+WEBHOOK_URL = os.environ["BOCXODBOT_URL"]
+WEBHOOK_PATH = "/webhook"
+WEB_SERVER_HOST = "0.0.0.0"
+WEB_SERVER_PORT = 80

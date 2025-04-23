@@ -6,10 +6,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
 from keyboards.cabinet_kb import (
-    cabinet_keyboard, back_to_cabinet_keyboard, set_orders_list_keyboard)
-from handlers.constants import ORDERS, MARKUP_URL
+    cabinet_keyboard, back_to_cabinet_keyboard, set_orders_list_keyboard,
+    outlets_va_keyboard)
+from handlers.constants import MARKUP_URL
 from handlers.start import send_main_menu
-from utils.requests import get_request, get_outlets_info, set_markup_request
+from utils.requests import (
+    get_request, get_outlets_info, set_markup_request, get_orders_info)
 
 cabinet_router = Router()
 
@@ -48,47 +50,79 @@ async def orders_list(call: CallbackQuery, user_api_token: str):
         NUMBER_OF_ORDERS = 5
     else:
         NUMBER_OF_ORDERS = 10
-    orders_list = await get_request(ORDERS, user_api_token)
-    orders = orders_list['orders']
+    orders_list = await get_orders_info(user_api_token)
+    orders = orders_list.get('orders')
+    if not orders:
+        return await call.answer(
+            'Список заказов пуст.',
+            show_alert=True
+        )
     message = '<b>Список заказов:</b>\n'
     for order in orders[:NUMBER_OF_ORDERS]:
-        number = order['uid']
-        amount = order['amount']
-        created_at = datetime.fromisoformat(order['created_at'])
-        updated_at = datetime.fromisoformat(order['updated_at'])
-        delivery_type = order['delivery_type']
-        if delivery_type == 1:
-            delivery_type = 'С доставкой'
-        else:
-            delivery_type = 'Самовывоз'
+        number = order.get('uid', 'Номер не найден')
+        amount = order.get('amount',  'Сумма не найдена')
+        delivery_period = order.get('delivery_period')
+        start_date = datetime.fromisoformat(delivery_period.get('start_time'))
+        end_date = datetime.fromisoformat(delivery_period.get('end_time'))
+        created_at = datetime.fromisoformat(order.get('created_at'))
+        start_date_str = start_date.strftime("%d.%m.%Y %H:%M")
+        end_date_str = end_date.strftime("%d.%m.%Y %H:%M")
         message += (
             f'<b>Заказ №{number}:</b> \n'
             f'<b>💴Заказ на сумму:</b> {amount} руб. \n'
             f'<b>📅Создан:</b> {created_at.strftime("%d.%m.%Y %H:%M")} \n'
-            f'<b>🗓Обновлен:</b> {updated_at.strftime("%d.%m.%Y %H:%M")} \n'
-            f'<b>🚚Тип доставки:</b> {delivery_type} \n\n')
+            f'<b>🕓 Время доставки/получения:</b> {start_date_str} - '
+            f'{end_date_str}\n\n')
     await call.message.edit_text(
         message,
         reply_markup=back_to_cabinet_keyboard()
     )
 
 
-@cabinet_router.callback_query(F.data == "addresses")
-async def addresses_list(call: CallbackQuery, user_api_token: str):
+@cabinet_router.callback_query(F.data == "outlets")
+async def outlets_list(call: CallbackQuery, user_api_token: str):
     response = await get_outlets_info(user_api_token)
     message = "<b>Список адресов доставки:</b>\n\n"
     outlets = [
         delivery for delivery in response if delivery.get('type') == 'co'
     ]
+    if not outlets:
+        return await call.answer(
+            'Список адресов доставки пуст.',
+            show_alert=True
+        )
     for outlet in outlets:
-        name = outlet['name']
-        add_info = outlet['add_info']
-        schedule = outlet['schedule']
+        add_info = outlet.get('add_info', 'Название не найдено')
+        name = outlet.get('name', 'Адрес не найден')
+        schedule = outlet.get('schedule', 'Расписание работы не найдено')
         message += (
             f"<b>🧾 {name}</b>\n"
             f"<b>💬 Комментарий с уточением к адресу:</b> {add_info}\n"
             f"<b>🕓 Расписание работы:</b> {schedule}\n\n"
         )
+    await call.message.edit_text(
+        message,
+        reply_markup=outlets_va_keyboard()
+    )
+
+
+@cabinet_router.callback_query(F.data == 'outlets_va')
+async def outlets_va(call: CallbackQuery, user_api_token: str):
+    response = await get_outlets_info(user_api_token)
+    outlets = [
+        delivery for delivery in response if delivery.get('type') == 'va'
+    ]
+    if not outlets:
+        return await call.answer(
+            'Список точек для самовывоза пуст.',
+            show_alert=True
+        )
+    message = '<b>Список точек для самовывоза:</b>\n\n'
+    for outlet in outlets:
+        add_info = outlet.get('add_info', 'Название не найдено')
+        name = outlet.get('name', 'Адрес не найден')
+        schedule = outlet.get('schedule', 'Расписание работы не найдено')
+        message += f"🧾<b>{add_info}</b>\n💬{name}\n🕓{schedule}\n\n"
     await call.message.edit_text(
         message,
         reply_markup=back_to_cabinet_keyboard()
@@ -120,7 +154,7 @@ async def set_markup(message: Message,
         await state.clear()
     except ValueError:
         await message.answer(
-            "<b>Наценка должна быть числом (1.0, 7.5 и т.д.</b>")
+            "<b>Наценка должна быть числом (1.0, 7.5 и т.д.)</b>")
 
 
 @cabinet_router.callback_query(F.data == 'back_to_main')

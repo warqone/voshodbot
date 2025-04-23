@@ -24,7 +24,7 @@ async def search_cross(call: CallbackQuery, state: FSMContext):
     """Поиск товара по артикулу."""
     await call.message.edit_text(
         '<b>Для поиска товара по артикулу введите артикул.</b>\n'
-        '<i>Пример:\n-C25011\n-K015670XS</i>',
+        '<i>Пример:\n- C25011\n- K015670XS</i>',
         reply_markup=back_to_main_menu_button()
     )
     await state.set_state(SearchCross.search_cross)
@@ -32,16 +32,15 @@ async def search_cross(call: CallbackQuery, state: FSMContext):
 
 @search_cross_router.message(StateFilter(SearchCross.search_cross))
 async def search_cross_brand(message: Message,
-                             state: FSMContext,
                              user_api_token: str):
     """Результат поиска товара по артикулу (уточнение бренда)."""
     if len(message.text) < MIN_SEARCH_QUERY_LENGTH:
         await message.answer(
-            '<b>Слишком короткий артикул.</b>'
+            '❌ <b>Слишком короткий артикул.</b>'
         )
         return
     await message.answer(
-        f'<b>Производим поиск товара по артикулу: {message.text}</b>'
+        f'Производим поиск товара по артикулу: <b>{message.text}</b>'
     )
     try:
         response = await request_search_cross(message.text, user_api_token)

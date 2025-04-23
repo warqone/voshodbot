@@ -6,7 +6,7 @@ def cabinet_keyboard():
     kb = InlineKeyboardBuilder()
     kb.button(text='📋 Список заказов', callback_data='orders')
     kb.button(text='📈 Изменить наценку', callback_data='set_markup')
-    kb.button(text='🚚 Список адресов доставки', callback_data='addresses')
+    kb.button(text='🚚 Список адресов доставки', callback_data='outlets')
     kb.button(text='◀️ В главное меню', callback_data='back_to_main')
     kb.adjust(1)
     return kb.as_markup()
@@ -25,5 +25,13 @@ def set_orders_list_keyboard():
 def back_to_cabinet_keyboard():
     """Клавиатура для возврата в кабинет."""
     kb = InlineKeyboardBuilder()
+    kb.button(text='◀️ Вернуться в кабинет', callback_data='account')
+    return kb.as_markup()
+
+
+def outlets_va_keyboard():
+    """Клавиатура для выбора адресов самовывоза или возврата в кабинет."""
+    kb = InlineKeyboardBuilder()
+    kb.button(text='🚚 Адреса самовывоза', callback_data='outlets_va')
     kb.button(text='◀️ Вернуться в кабинет', callback_data='account')
     return kb.as_markup()

@@ -3,7 +3,7 @@ import json
 
 from handlers.constants import (
     API_URL_V1, API_URL_V2, BASKET, SEARCH_NAME, SEARCH_CROSS, PHOTO_URL,
-    MARKUP_URL, OUTLETS)
+    MARKUP_URL, OUTLETS, ORDERS)
 
 
 async def get_request(add_url: str, user_api_token: str):
@@ -52,7 +52,19 @@ async def request_search_cross(query: str, user_api_token: str, brand=None):
             return data['response']
 
 
-async def request_add_to_basket(product_id: str, user_api_token: str):
+async def get_orders_info(user_api_token: str):
+    async with aiohttp.ClientSession() as session:
+        headers = {
+            'X-Voshod-API-KEY': user_api_token,
+        }
+        url = f"{API_URL_V2 + ORDERS}"
+        async with session.get(url, headers=headers) as response:
+            return await response.json()
+
+
+async def request_add_to_basket(product_id: str,
+                                user_api_token: str,
+                                quantity: int = 1):
     async with aiohttp.ClientSession() as session:
         headers = {
             'X-Voshod-API-KEY': user_api_token,
@@ -61,7 +73,7 @@ async def request_add_to_basket(product_id: str, user_api_token: str):
             "items": [
                 {
                     "mog": product_id,
-                    "count": 1
+                    "count": quantity
                     }
             ]
         }
@@ -102,4 +114,23 @@ async def set_markup_request(markup: float, user_api_token: str):
         url = f"{API_URL_V1 + MARKUP_URL}"
         async with session.patch(
                 url, headers=headers, data=json.dumps(data)) as response:
+            return await response.json()
+
+
+async def create_order(user_api_token: str, outlet_id: str):
+    async with aiohttp.ClientSession() as session:
+        headers = {
+            'X-Voshod-API-KEY': user_api_token,
+        }
+        data = {
+            "order": {
+                "delivery_type": 1,
+                "delivery_address": outlet_id
+            }
+        }
+        url = f"{API_URL_V1 + BASKET}"
+        async with session.post(
+                url,
+                headers=headers,
+                data=json.dumps(data)) as response:
             return await response.json()

@@ -14,6 +14,7 @@ from handlers.constants import (
 from handlers.start import get_main_menu
 from keyboards.start_kb import back_to_main_menu_button
 from utils.requests import request_search_name
+from utils.utils import formatting_items
 
 
 search_name_router = Router()
@@ -171,18 +172,7 @@ class ProductListManager:
         try:
             await message.delete()
 
-            text = (
-                f"📦 <b>{product.get('name', 'Название не указано')}</b>\n"
-                f"🏢 <b>Производитель:</b> {product.get('oem_brand', 'Не указан')}\n"
-                f"🔢 <b>Артикул:</b> {product.get('oem_num', 'Не указан')}\n"
-                f"🏷️ <b>Цена:</b> {product.get('price', 'Не указана')} руб.\n"
-                f"<b>Количество на складах:</b> {product.get('count', 0)} "
-                f"{product.get('unit', 'шт')}\n"
-                "<b>Количество на складах Челябинска:</b> "
-                f"{product.get('count_chel', 0)} {product.get('unit', 'шт')}\n"
-                "<b>Количество на складах Екатеринбурга:</b> "
-                f"{product.get('count_ekb', 0)} {product.get('unit', 'шт')}\n"
-            )
+            text = await formatting_items(product)
 
             kb = InlineKeyboardBuilder()
             kb.button(
